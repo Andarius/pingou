@@ -1,0 +1,48 @@
+{
+  "parse_nginx_logs": [
+    {
+      "line": "162.142.125.54 - - [31/Dec/2020:09:11:34 +0000] \"GET / HTTP/1.1\" 404 33 \"-\" \"Mozilla/5.0 (compatible; CensysInspect/1.1; +https://about.censys.io/)\" cookie=\"-\" rt=0.002 uct=0.000 uht=0.004 urt=0.004",
+      "reg": "{IP_ADDRESS:ip_address} - {TEXT:remote_user} \\[{TIMESTAMP:timestamp} {TZ:tz}\\] \"{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}\" {NUMBER:status_code} {NUMBER:body_bytes_sent} \"{TEXT:http_referer}\" \"{ANY:user_agent}\" cookie=\"{TEXT:cookie}\" rt={NUMBER:rt} uct={NUMBER:uct} uht={NUMBER:uht} urt={NUMBER:urt}",
+      "expected": {
+        "body_bytes_sent": "33",
+        "cookie": "-",
+        "http_referer": "-",
+        "http_version": "1.1",
+        "ip_address": "162.142.125.54",
+        "remote_user": "-",
+        "request": "/",
+        "request_method": "GET",
+        "rt": "0.002",
+        "status_code": "404",
+        "timestamp": "31/Dec/2020:09:11:34",
+        "tz": "+0000",
+        "uct": "0.000",
+        "uht": "0.004",
+        "urt": "0.004",
+        "user_agent": "Mozilla/5.0 (compatible; CensysInspect/1.1; +https://about.censys.io/)"
+      }
+    },
+    {
+      "line": "72.131.162.50 - - [30/Dec/2020:10:06:24 +0000] \"GET /test?to_date=2020-12-30&from_date=2020-09-17&lang=fr-FR HTTP/1.1\" 200 47594 \"-\" \"okhttp/3.12.1\" cookie=\"2|1:0|10:1608736138|8:pingou|48:ZDZNTktNjg2Yy00NjFjLWJmNmYtNmY4ODZlODZhZjBh|0d982c2668f8fb728f31aa03152d7566909d3b6813116eb8474e1b05ee4dda38\" rt=3.003 uct=0.000 uht=3.004 urt=3.004",
+      "reg": "{IP_ADDRESS:ip_address} - {TEXT:remote_user} \\[{TIMESTAMP:timestamp} {TZ:tz}\\] \"{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}\" {NUMBER:status_code} {NUMBER:body_bytes_sent} \"{TEXT:http_referer}\" \"{ANY:user_agent}\" cookie=\"{ANY:cookie}\" rt={NUMBER:rt} uct={NUMBER:uct} uht={NUMBER:uht} urt={NUMBER:urt}",
+      "expected": {
+        "body_bytes_sent": "47594",
+        "cookie": "2|1:0|10:1608736138|8:pingou|48:ZDZNTktNjg2Yy00NjFjLWJmNmYtNmY4ODZlODZhZjBh|0d982c2668f8fb728f31aa03152d7566909d3b6813116eb8474e1b05ee4dda38",
+        "http_referer": "-",
+        "http_version": "1.1",
+        "ip_address": "72.131.162.50",
+        "remote_user": "-",
+        "request": "/test?to_date=2020-12-30&from_date=2020-09-17&lang=fr-FR",
+        "request_method": "GET",
+        "rt": "3.003",
+        "status_code": "200",
+        "timestamp": "30/Dec/2020:10:06:24",
+        "tz": "+0000",
+        "uct": "0.000",
+        "uht": "3.004",
+        "urt": "3.004",
+        "user_agent": "okhttp/3.12.1"
+      }
+    }
+  ]
+}
