@@ -11,7 +11,10 @@ from ..config import Config, PipelineItem
 from pg import insert_pg
 
 
-async def queue_worker(queue: asyncio.Queue, pipeline: List[PipelineItem], pool: Pool):
+async def queue_worker(queue: asyncio.Queue,
+                       pipeline: List[PipelineItem],
+                       pool: Pool,
+                       dest_table: str = 'pingou.nginx_logs'):
     if not pipeline:
         logger.warning(f'No pipeline specified, stopping queue listener')
         return
@@ -30,7 +33,7 @@ async def queue_worker(queue: asyncio.Queue, pipeline: List[PipelineItem], pool:
                 'log': log_line,
                 **item
             }
-            await insert_pg(conn, 'pingou.nginx_logs', data)
+            await insert_pg(conn, dest_table, data)
             queue.task_done()
     finally:
         await pool.release(conn, timeout=10)
