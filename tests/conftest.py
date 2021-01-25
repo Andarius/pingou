@@ -8,6 +8,8 @@ import shutil
 import logging
 from .utils import get_tables, clean_tables
 from pg import init_connection
+from typing import Iterator
+from psycopg2.extensions import connection
 
 _cur_file = Path(os.path.dirname(__file__))
 TMP_PATH = _cur_file / '..' / 'tmp'
@@ -32,7 +34,7 @@ def pg_envs():
 
 
 @pytest.fixture(scope='session')
-def engine(pg_envs):
+def engine(pg_envs) -> connection:
     conn = psycopg2.connect("user={PG_USER} password={PG_PWD} host={PG_URL} port={PG_PORT} dbname={PG_DB}".format(
         **pg_envs
     ))

@@ -26,6 +26,10 @@ class Config:
     error_pipeline: List[PipelineItem]
 
     @property
+    def pipelines(self):
+        return chain(self.access_pipeline, self.error_pipeline)
+
+    @property
     def paths(self):
         return chain(self.sources.error, self.sources.access)
 

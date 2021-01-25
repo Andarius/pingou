@@ -4,7 +4,7 @@ import logging
 import asyncio
 import inspect
 
-from pingou.listener import listener_main
+from pingou.listener import listener_main, worker_main
 from logs import init_logging
 from pingou import __version__
 
@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser('Pingou logs parser')
 subparsers = parser.add_subparsers()
 
 parser.add_argument('--pg', default='postgres:postgres@postgres:5432', help='PG host/port')
-parser.add_argument('--pg-db', default='postgres', help='PG Database')
+parser.add_argument('--pg-db', default='monitoring', help='PG Database')
 parser.add_argument('--log-path', default=os.getenv('LOG_PATH', '/tmp'),
                     help='Logs path')
 parser.add_argument('--log-lvl', default=os.getenv('LOG_LEVEL', logging.INFO),
@@ -27,6 +27,17 @@ parser_listener.add_argument('-c', '--config',
                              type=str,
                              required=True,
                              help='Config file path')
+# Worker
+parser_worker = subparsers.add_parser('worker')
+parser_worker.set_defaults(func=worker_main)
+parser_worker.add_argument('-n', '--nb-workers',
+                           default=1,
+                           type=int,
+                           help='Number of workers')
+parser_worker.add_argument('-c', '--config',
+                           type=str,
+                           required=True,
+                           help='Config file path')
 
 # Version
 parser_version = subparsers.add_parser('version')

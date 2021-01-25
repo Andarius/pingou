@@ -3,6 +3,8 @@ from pathlib import Path
 from enum import Enum
 import asyncio
 import functools
+from typing import List
+from psycopg2.extensions import connection
 
 TABLES = None
 
@@ -86,7 +88,7 @@ def get_tables(engine, ignore=None):
     return TABLES
 
 
-def insert_many(table, data, conn, **kwargs):
+def insert_many(table: str, data: List[dict], conn: connection, **kwargs):
     query, data = get_insert_query(table, data, **kwargs)
     with conn.cursor() as cur:
         _ = cur.executemany(query, data)
