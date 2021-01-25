@@ -7,5 +7,3 @@ CREATE TABLE IF NOT EXISTS pingou.nginx_logs
     inserted_at  TIMESTAMP NOT NULL default now()
 
 );
-
-DROP TABLE pingou.nginx_logs;

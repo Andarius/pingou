@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import logging
 from .utils import get_tables, clean_tables
+from pg import init_connection
 
 _cur_file = Path(os.path.dirname(__file__))
 TMP_PATH = _cur_file / '..' / 'tmp'
@@ -21,11 +22,11 @@ def init_logs():
 @pytest.fixture(scope='session')
 def pg_envs():
     return {
-        'PG_URL': os.getenv('PG_URL', '127.0.0.1'),
-        'PG_USER': os.getenv('PG_USER', 'postgres'),
-        'PG_PWD': os.getenv('PG_PWD', 'postgres'),
-        'PG_PORT': os.getenv('PG_PORT', 5432),
-        'PG_DB': os.getenv('PG_USERS_DB', 'postgres')
+        'PG_URL': '127.0.0.1',
+        'PG_USER': 'postgres',
+        'PG_PWD': 'postgres',
+        'PG_PORT': '5432',
+        'PG_DB': 'monitoring'
     }
 
 
@@ -40,11 +41,17 @@ def engine(pg_envs):
     conn.close()
 
 
+async def connect_pg(pg_envs):
+    conn = await asyncpg.connect('postgresql://{PG_USER}:{PG_PWD}@{PG_URL}:{PG_PORT}/{PG_DB}'.format(
+        **pg_envs
+    ))
+    await init_connection(conn)
+    return conn
+
+
 @pytest.fixture(scope='session')
 def aengine(loop, pg_envs):
-    conn = loop.run_until_complete(asyncpg.connect('postgresql://{PG_USER}:{PG_PWD}@{PG_URL}:{PG_PORT}/{PG_DB}'.format(
-        **pg_envs
-    )))
+    conn = loop.run_until_complete(connect_pg(pg_envs))
     yield conn
     loop.run_until_complete(conn.close())
 
@@ -54,7 +61,7 @@ def pool(loop, pg_envs):
     pool = loop.run_until_complete(
         asyncpg.create_pool('postgresql://{PG_USER}:{PG_PWD}@{PG_URL}:{PG_PORT}/{PG_DB}'.format(
             **pg_envs
-        )))
+        ), init=init_connection))
 
     yield pool
     loop.run_until_complete(asyncio.wait_for(pool.close(), 1))
@@ -83,13 +90,12 @@ def log_file(tmp_path):
     yield log_path
 
 
-@pytest.fixture(scope='function', autouse=False)
-def clean_pg(engine, no_clean):
+@pytest.fixture(scope='function', autouse=True)
+def clean_pg(engine):
     engine.commit()
     tables = get_tables(engine)
 
     clean_tables(engine, tables)
     yield
-    if not no_clean:
-        engine.commit()
-        clean_tables(engine, tables)
+    engine.commit()
+    clean_tables(engine, tables)
