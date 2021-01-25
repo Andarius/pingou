@@ -18,9 +18,10 @@ services:
   nginx:
     image: nginx:${NGINX_VERSION}
     container_name: ${NGINX_NAME}
-    ports:
-      - ${HOST}:80:80
+#    ports:
+#      - ${HOST}:80:80
     volumes:
        - ./nginx.conf:/etc/nginx/nginx.conf:ro
+       - ../../tests/nginx_logs:/var/log/nginx/:rw
     command: [nginx-debug, '-g', 'daemon off;']
     network_mode: host

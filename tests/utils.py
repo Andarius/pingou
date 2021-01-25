@@ -122,3 +122,21 @@ def trackcalls(func):
     wrapper.called = False
     wrapper.call_count = 0
     return wrapper
+
+
+def run_first_completed(loop, *fns):
+    done, pending = loop.run_until_complete(
+        asyncio.wait(fns,
+                     return_when=asyncio.FIRST_COMPLETED)
+    )
+
+    for x in pending:
+        x.cancel()
+    for x in done:
+        x.result()
+
+
+def append_line(file: Path, line: str):
+    with file.open('a') as f:
+        f.write(line)
+   

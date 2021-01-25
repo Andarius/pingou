@@ -21,28 +21,32 @@ async def queue_worker(queue: asyncio.Queue,
     try:
         while True:
             item = await queue.get()
+            log_infos, log_line = None, None
             for _pipe in pipeline:
                 log_line = item.pop('log')
                 log_infos = parse_line(log_line, _pipe.regex)
                 if log_infos:
                     break
-            else:
-                continue
-            data = {
-                'infos': log_infos,
-                'log': log_line,
-                **item
-            }
-
-            await insert_pg(conn, dest_table, data)
+            if log_line is not None:
+                data = {
+                    'infos': log_infos,
+                    'log': log_line.strip(),
+                    **item
+                }
+                await insert_pg(conn, dest_table, data)
             queue.task_done()
     finally:
         await pool.release(conn, timeout=10)
 
 
-async def listen_to_file(file_path: str, queue: asyncio.Queue):
+async def listen_to_file(file_path: str,
+                         queue: asyncio.Queue,
+                         last_lines: int = 0,
+                         fp_poll_secs: float = 0.125):
     logger.info(f'Listening to file: {file_path}')
-    async for line in tail(file_path):
+    async for line in tail(file_path,
+                           last_lines=last_lines,
+                           fp_poll_secs=fp_poll_secs):
         await queue.put({'log': line, 'file': file_path, 'inserted_at': time.time()})
 
 

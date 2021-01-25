@@ -11,6 +11,7 @@ from pg import init_connection
 
 _cur_file = Path(os.path.dirname(__file__))
 TMP_PATH = _cur_file / '..' / 'tmp'
+NGINX_LOGS_PATH = _cur_file / 'nginx_logs'
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -99,3 +100,14 @@ def clean_pg(engine):
     yield
     engine.commit()
     clean_tables(engine, tables)
+
+
+@pytest.fixture()
+def nginx_logs():
+    access_file = NGINX_LOGS_PATH / 'access.log'
+    error_file = NGINX_LOGS_PATH / 'error.log'
+
+    # access_file.touch()
+    # error_file.touch()
+
+    return (access_file, error_file)

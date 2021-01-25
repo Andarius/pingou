@@ -8,6 +8,8 @@ import asyncio
 from functools import partial
 from typing import AsyncIterator
 import time
+import subprocess
+import select
 
 LINE_BUFFER = 1
 
@@ -99,10 +101,8 @@ async def tail(
                 buff.write(chunk)
 
             buff.seek(0, os.SEEK_SET)
-
             for line in buff.readlines():
-                yield line.rstrip()
-
+                yield line.rstrip().replace('\x00', '')
             # resize our string buffer
             buff.truncate(0)
 
@@ -111,18 +111,13 @@ async def tail(
         fp.close()
 
 
-if __name__ == '__main__':
-    async def main():
-        async for line in tail(r'/etc/foldingathome/log.txt'):
-            print(line)
 
+async def tail2(filename, **kwargs):
+    with open(filename, 'r') as f:
+        while True:
+            line = f.readline()
+            if line:
+                yield line
+            else:
+                await asyncio.sleep(0.1)
 
-    loop = asyncio.get_event_loop()
-
-    try:
-        loop.run_until_complete(main())
-    except KeyboardInterrupt:
-        pass
-
-    loop.stop()
-    loop.close()
