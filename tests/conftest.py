@@ -12,7 +12,7 @@ from pg import init_connection
 _cur_file = Path(os.path.dirname(__file__))
 TMP_PATH = _cur_file / '..' / 'tmp'
 NGINX_LOGS_PATH = _cur_file / 'nginx_logs'
-
+DATA_PATH = _cur_file / 'files'
 
 @pytest.fixture(scope='session', autouse=True)
 def init_logs():
@@ -81,12 +81,12 @@ def tmp_path():
 
     yield TMP_PATH
 
-    shutil.rmtree(TMP_PATH, ignore_errors=True)
+    # shutil.rmtree(TMP_PATH, ignore_errors=True)
 
 
 @pytest.fixture()
 def log_file(tmp_path):
-    log_path = tmp_path / 'log.log'
+    log_path = tmp_path / 'pingou.log'
     log_path.touch()
     yield log_path
 

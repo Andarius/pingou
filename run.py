@@ -23,7 +23,10 @@ parser.add_argument('-v', '--verbose', action='store_true',
 # Listener
 parser_listener = subparsers.add_parser('listener')
 parser_listener.set_defaults(func=listener_main)
-parser_listener.add_argument('-c', '--config', type=str, default='', help='Config file')
+parser_listener.add_argument('-c', '--config',
+                             type=str,
+                             required=True,
+                             help='Config file path')
 
 # Version
 parser_version = subparsers.add_parser('version')
