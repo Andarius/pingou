@@ -2,7 +2,8 @@ from .tail import tail
 from typing import List
 import asyncio
 from logs import logger
-import time
+from pathlib import Path
+
 from asyncpg import Connection
 from asyncpg.pool import Pool
 from ..parser import parse_line
@@ -10,7 +11,7 @@ from ..config import Config, PipelineItem
 from pg import insert_pg, iterate_pg, connect_pool
 import datetime as dt
 
-_GET_LOG_QUERY = 'SELECT id, log from {table} where processed_at is NULL order by inserted_at asc'
+_GET_LOG_QUERY = 'SELECT id, log, error from {table} where processed_at is NULL order by inserted_at asc'
 
 
 async def update_items(conn: Connection,
@@ -27,11 +28,12 @@ async def update_items(conn: Connection,
 
 
 async def queue_worker(pool: Pool,
-                       pipelines: List[PipelineItem],
+                       access_pipelines: List[PipelineItem],
+                       error_pipelines: List[PipelineItem],
                        *,
                        table: str = 'pingou.nginx_logs',
                        chunk_size: int = 100):
-    if not pipelines:
+    if not access_pipelines and not error_pipelines:
         logger.warning(f'No pipelines specified, stopping worker')
         return
 
@@ -43,6 +45,7 @@ async def queue_worker(pool: Pool,
             data = []
             for item in chunk:
                 log_line = item['log']
+                pipelines = error_pipelines if item['error'] else access_pipelines
                 for _pipe in pipelines:
                     log_infos = parse_line(log_line, _pipe.regex)
                     if log_infos:
@@ -50,7 +53,6 @@ async def queue_worker(pool: Pool,
                 else:
                     log_infos = None
                 data.append({'infos': log_infos, 'id': item['id']})
-
 
             await update_items(conn, table, data)
     finally:
@@ -60,32 +62,46 @@ async def queue_worker(pool: Pool,
 async def listen_to_file(file_path: str,
                          pool: Pool,
                          *,
+                         is_error: bool = False,
                          last_lines: int = 0,
                          fp_poll_secs: float = 0.125,
                          table: str = 'pingou.nginx_logs'):
+    if not Path(file_path).exists():
+        raise FileNotFoundError(f'No file found at {file_path}')
+
     logger.info(f'Listening to file: {file_path}')
     conn = await pool.acquire()
     try:
         async for line in tail(file_path,
                                last_lines=last_lines,
                                fp_poll_secs=fp_poll_secs):
-            await insert_pg(conn, table, {'log': line, 'file': file_path, 'inserted_at': dt.datetime.now()})
+            await insert_pg(conn, table, {
+                'log': line,
+                'file': file_path,
+                'inserted_at': dt.datetime.now(),
+                'error': is_error
+            })
     finally:
         await pool.release(conn, timeout=10)
 
 
 async def listener_main(options):
-    config = Config.load(options.config)
+    config_file = vars(options).get('config-file')
+    if not options.config_path and not config_file:
+        logger.error('Please specify either a config path of file')
+        return
+
+    config = Config.load(options.config_path or config_file)
 
     pool = await connect_pool(options.pg, options.pg_db)
 
     file_listeners = [
-        listen_to_file(_path, pool)
-        for _path in config.sources.access
+        listen_to_file(str(_path), pool)
+        for _path in config.access_files
     ]
     file_listeners += [
-        listen_to_file(_path, pool)
-        for _path in config.sources.error
+        listen_to_file(str(_path), pool, is_error=True)
+        for _path in config.error_files
     ]
     try:
         await asyncio.gather(*file_listeners)
@@ -94,10 +110,15 @@ async def listener_main(options):
 
 
 async def worker_main(options):
-    config = Config.load(options.config)
+    config_file = vars(options).get('config-file')
+    if not options.config_path and not config_file:
+        logger.error('Please specify either a config path of file')
+        return
+
+    config = Config.load(options.config_path or config_file)
     pool = await connect_pool(options.pg, options.pg_db)
     workers = [
-        queue_worker(pool, config.pipelines)
+        queue_worker(pool, config.access_pipelines, config.error_pipelines)
         for _path in range(options.nb_workers)
     ]
     try:

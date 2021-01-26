@@ -8,13 +8,20 @@ import shutil
 import logging
 from .utils import get_tables, clean_tables
 from pg import init_connection
-from typing import Iterator
 from psycopg2.extensions import connection
 
 _cur_file = Path(os.path.dirname(__file__))
 TMP_PATH = _cur_file / '..' / 'tmp'
 NGINX_LOGS_PATH = _cur_file / 'nginx_logs'
 DATA_PATH = _cur_file / 'files'
+
+DEFAULT_OPTIONS = {
+    'log_lvl': logging.WARNING,
+    'pg': 'postgres:postgres@localhost:5432',
+    'pg_db': 'monitoring',
+    'verbose': False,
+}
+
 
 @pytest.fixture(scope='session', autouse=True)
 def init_logs():
@@ -83,7 +90,7 @@ def tmp_path():
 
     yield TMP_PATH
 
-    # shutil.rmtree(TMP_PATH, ignore_errors=True)
+    shutil.rmtree(TMP_PATH, ignore_errors=True)
 
 
 @pytest.fixture()

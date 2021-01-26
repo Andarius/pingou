@@ -5,6 +5,6 @@ CREATE TABLE IF NOT EXISTS pingou.nginx_logs
     infos        JSONB,
     file         TEXT,
     inserted_at  TIMESTAMP          NOT NULL default now(),
-    processed_at TIMESTAMP
-
+    processed_at TIMESTAMP,
+    error        BOOLEAN            NOT NULL
 );

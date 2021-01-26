@@ -1,10 +1,13 @@
 import asyncio
+from .conftest import DEFAULT_OPTIONS, DATA_PATH
 from .utils import (
     run_first_completed,
     wait_true, fetch_one, fetch_all, insert_many,
     append_line)
 import datetime as dt
 import requests
+from types import SimpleNamespace
+import pytest
 
 
 def _count_logs(engine, processed_at_not_null=False):
@@ -52,14 +55,15 @@ def test_queue_worker(loop, pool, engine):
     ]
 
     async def worker():
-        await queue_worker(pool, pipeline, chunk_size=1)
+        await queue_worker(pool, pipeline, [], chunk_size=1)
 
     async def test():
         insert_many('pingou.nginx_logs',
                     [{
                         'log': log_line,
                         'file': 'a file',
-                        'inserted_at': dt.datetime(2019, 1, 1, 10, 0, 0)
+                        'inserted_at': dt.datetime(2019, 1, 1, 10, 0, 0),
+                        'error': False
                     }],
                     engine)
         await wait_true(lambda: _count_logs(engine, processed_at_not_null=True) == 1)
@@ -88,7 +92,9 @@ def test_queue_worker(loop, pool, engine):
                         'log': '162.142.125.54 - - [31/Dec/2020:09:11:34 +0000] "GET / HTTP/1.1" 404 '
                                '33 "-" "Mozilla/5.0 (compatible; CensysInspect/1.1; '
                                '+https://about.censys.io/)" cookie="-" rt=0.002 uct=0.000 uht=0.004 '
-                               'urt=0.004'}
+                               'urt=0.004',
+                        'error': False
+                        }
 
     run_first_completed(loop, worker(), test())
 
@@ -104,14 +110,15 @@ def test_queue_worker_no_match(engine, pool, loop):
     ]
 
     async def worker():
-        await queue_worker(pool, pipeline, chunk_size=1)
+        await queue_worker(pool, pipeline, [], chunk_size=1)
 
     async def test():
         insert_many('pingou.nginx_logs',
                     [{
                         'log': log_line,
                         'file': 'a file',
-                        'inserted_at': dt.datetime(2019, 1, 1, 10, 0, 0)
+                        'inserted_at': dt.datetime(2019, 1, 1, 10, 0, 0),
+                        'error': False
                     }],
                     engine)
         await wait_true(lambda: _count_logs(engine, processed_at_not_null=True) == 1)
@@ -122,7 +129,8 @@ def test_queue_worker_no_match(engine, pool, loop):
             'log': '127.0.0.1 - - [25/Jan/2021:16:35:54 +0000] "GET / HTTP/1.1" 200 612 "-" "python-requests/2.25.1" "-"',
             'infos': None,
             'file': 'a file',
-            'inserted_at': dt.datetime(2019, 1, 1, 10, 0)
+            'inserted_at': dt.datetime(2019, 1, 1, 10, 0),
+            'error': False
         }
 
     run_first_completed(loop, worker(), test())
@@ -165,7 +173,7 @@ def test_listen_nginx(loop, nginx_logs, pool, engine):
         await wait_true(lambda: _count_logs(engine) == 4)
         items = fetch_all(engine, 'SELECT * from pingou.nginx_logs order by inserted_at desc limit 2')
         access_item, error_item = ((items[0], items[1])
-                                   if items[0]['file'] == str(access_logs)
+                                   if not items[0]['error']
                                    else (items[1], items[0]))
         assert access_item['file'] == str(access_logs)
         assert error_item['file'] == str(error_logs)
@@ -175,4 +183,63 @@ def test_listen_nginx(loop, nginx_logs, pool, engine):
     run_first_completed(loop,
                         listen_error_events(),
                         listen_access_events(),
+                        test())
+
+
+def test_listen_nginx_full(loop, nginx_logs, pool, engine):
+    from pingou.listener.listener import listener_main, worker_main
+    access_logs, error_logs = nginx_logs
+
+    async def listener():
+        options = {
+            **DEFAULT_OPTIONS,
+            'config_path': str(DATA_PATH / 'config.yml')
+        }
+        await listener_main(SimpleNamespace(**options))
+
+    async def worker():
+        options = {
+            **DEFAULT_OPTIONS,
+            'nb_workers': 1,
+            'config_path': str(DATA_PATH / 'config.yml')
+        }
+        await worker_main(SimpleNamespace(**options))
+
+    async def test():
+        # Waiting for listener to start
+        await asyncio.sleep(1)
+
+        # Testing access
+        resp = requests.get('http://127.0.0.1')
+        assert resp.status_code == 200
+        await wait_true(lambda: _count_logs(engine) == 1)
+        await wait_true(lambda: _count_logs(engine, processed_at_not_null=True) == 1,
+                        sleep=0.5)
+        item = _fetch_last_item(engine)
+        assert item['log'].startswith('127.0.0.1 - - ')
+        assert item['inserted_at']
+        assert item['infos']
+
+        # Testing again access
+        resp = requests.get('http://127.0.0.1')
+        assert resp.status_code == 200
+        await wait_true(lambda: _count_logs(engine, processed_at_not_null=True) == 2,
+                        sleep=0.5)
+        item = _fetch_last_item(engine)
+        assert item['log'].startswith('127.0.0.1 - - ')
+        #
+        # # Testing error
+        resp = requests.get('http://127.0.0.1/error')
+        assert resp.status_code == 404
+        await wait_true(lambda: _count_logs(engine, processed_at_not_null=True) == 4, sleep=0.5)
+        items = fetch_all(engine, 'SELECT * from pingou.nginx_logs order by inserted_at desc limit 2')
+        access_item, error_item = ((items[0], items[1])
+                                   if not items[0]['error']
+                                   else (items[1], items[0]))
+        assert access_item['infos']
+        assert '[error]' in error_item['log']
+
+    run_first_completed(loop,
+                        listener(),
+                        worker(),
                         test())

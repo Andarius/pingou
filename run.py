@@ -3,7 +3,7 @@ import os
 import logging
 import asyncio
 import inspect
-
+import sys
 from pingou.listener import listener_main, worker_main
 from logs import init_logging
 from pingou import __version__
@@ -23,10 +23,14 @@ parser.add_argument('-v', '--verbose', action='store_true',
 # Listener
 parser_listener = subparsers.add_parser('listener')
 parser_listener.set_defaults(func=listener_main)
-parser_listener.add_argument('-c', '--config',
+parser_listener.add_argument('-p', '--config-path',
                              type=str,
-                             required=True,
                              help='Config file path')
+parser_listener.add_argument('config-file',
+                             type=argparse.FileType('r'),
+                             nargs='?',
+                             default=sys.stdin,
+                             help='Config file')
 # Worker
 parser_worker = subparsers.add_parser('worker')
 parser_worker.set_defaults(func=worker_main)
@@ -34,10 +38,14 @@ parser_worker.add_argument('-n', '--nb-workers',
                            default=1,
                            type=int,
                            help='Number of workers')
-parser_worker.add_argument('-c', '--config',
+parser_worker.add_argument('-p', '--config-path',
                            type=str,
-                           required=True,
                            help='Config file path')
+parser_worker.add_argument('config-file',
+                           type=argparse.FileType('r'),
+                           nargs='?',
+                           default=sys.stdin,
+                           help='Config file')
 
 # Version
 parser_version = subparsers.add_parser('version')

@@ -2,6 +2,7 @@ import asyncpg
 from asyncpg.connection import Connection
 from typing import List, AsyncIterator
 import asyncio
+from logs import logger
 
 try:
     import ujson as json
@@ -25,7 +26,9 @@ async def init_connection(conn):
 
 
 async def connect_pool(url: str, db: str):
-    pool = await asyncpg.create_pool(f'postgresql://{url}/{db}', init=init_connection)
+    pg_url = f'postgresql://{url}/{db}'
+    logger.info(f'Connecting to {pg_url}')
+    pool = await asyncpg.create_pool(pg_url, init=init_connection)
     return pool
 
 
@@ -50,6 +53,8 @@ async def iterate_pg(conn: Connection,
     while True:
         data = await conn.fetch(query, *args, from_offset, from_offset + chunk_size)
         if not data:
+            from_offset = 0
             await asyncio.sleep(sleep_no_data)
-        yield data
-        from_offset += chunk_size
+        else:
+            yield data
+            from_offset += chunk_size

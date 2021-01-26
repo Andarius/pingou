@@ -1,0 +1,38 @@
+version: "3.0"
+
+services:
+
+  postgres:
+    image: postgres:${PG_VERSION}
+    container_name: ${PG_NAME}
+    ports:
+      - ${HOST}:5432:5432
+    volumes:
+      - type=tmpfs,destination=/var/lib/postgresql/data
+      - ./init-pg.sh:/docker-entrypoint-initdb.d/init-pg.sh:ro
+      - ../../sql:/sql_scripts
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    command: -c fsync=off
+
+  nginx:
+    image: nginx:${NGINX_VERSION}
+    container_name: ${NGINX_NAME}
+    ports:
+      - ${HOST}:80:80
+    volumes:
+       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+       - nginx_logs:/var/log/nginx/:rw
+    command: [nginx-debug, '-g', 'daemon off;']
+
+  pingou:
+    image: andarius/pingou:${PINGOU_VERSION}
+    container_name: pingou
+    external_links:
+      - postgres:postgres
+    volumes:
+       - nginx_logs:/nginx_logs:ro
+
+volumes:
+  nginx_logs:
+    external: true

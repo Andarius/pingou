@@ -1,10 +1,8 @@
 sources:
   access:
-    - ../nginx_logs/access.log
-#    - ../nginx_logs/access.*.log
+    - /nginx_logs/test-access.log
   error:
-    - ../nginx_logs/error.log
-#    - ../nginx_logs/error.*.log
+    - /nginx_logs/test-error.log
 
 pipeline:
   access:

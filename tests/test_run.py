@@ -1,21 +1,13 @@
 from types import SimpleNamespace
-import logging
 import pytest
-from .conftest import DATA_PATH
+from .conftest import DATA_PATH, DEFAULT_OPTIONS
 from .utils import trackcalls
-
-_DEFAULT_OPTIONS = {
-    'log_lvl': logging.WARNING,
-    'pg': 'postgres:postgres@localhost:5432',
-    'pg_db': 'monitoring',
-    'verbose': False,
-}
 
 
 def test_main(loop, tmp_path):
     from run import main
     options = {
-        **_DEFAULT_OPTIONS,
+        **DEFAULT_OPTIONS,
         'log_path': tmp_path
     }
     main(SimpleNamespace(**options))
@@ -32,9 +24,9 @@ def test_parser_listener(loop, config_file, monkeypatch):
 
     from run import parser
     args = parser.parse_args(['--pg', 'postgres:postgres@localhost:5432', 'listener',
-                              '-c', str(config_file)])
+                              '-p', str(config_file)])
     loop.run_until_complete(args.func(args))
-    assert mock_listen_to_file.call_count == 4
+    assert mock_listen_to_file.call_count == 2
 
 
 @pytest.mark.parametrize('config_file', [
@@ -48,7 +40,7 @@ def test_parser_worker(loop, config_file, monkeypatch):
 
     from run import parser
     args = parser.parse_args(['--pg', 'postgres:postgres@localhost:5432', 'worker',
-                              '-c', str(config_file),
+                              '-p', str(config_file),
                               '-n', '2'])
     loop.run_until_complete(args.func(args))
     assert mock_queue_worker.call_count == 2

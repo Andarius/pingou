@@ -40,7 +40,7 @@ def init_logging(
         datefmt="[%X]",
         handlers=[
             fh,
-            RichHandler(rich_tracebacks=True)
+            RichHandler(show_path=False, rich_tracebacks=True)
         ]
     )
 

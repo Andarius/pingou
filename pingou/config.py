@@ -4,7 +4,9 @@ from typing import Union, List
 from collections import namedtuple
 from itertools import chain
 import re
+from io import TextIOWrapper
 from .parser import parse_regex
+from pathlib import Path
 
 Sources = namedtuple('Sources', ['error', 'access'])
 
@@ -20,33 +22,53 @@ class PipelineItem:
 
 @dataclass
 class Config:
+    access_pipelines: List[PipelineItem]
+    error_pipelines: List[PipelineItem]
+
     sources: Union[dict, Sources]
-
-    access_pipeline: List[PipelineItem]
-    error_pipeline: List[PipelineItem]
+    _file_path: str = None
 
     @property
-    def pipelines(self):
-        return chain(self.access_pipeline, self.error_pipeline)
+    def access_files(self) -> List[Path]:
+        if self._file_path:
+            return [self._file_path / x
+                    if not x.startswith('/') else Path(x)
+                    for x in self.sources.access]
+        else:
+            return self.sources.access
 
     @property
-    def paths(self):
-        return chain(self.sources.error, self.sources.access)
+    def error_files(self) -> List[Path]:
+        if self._file_path:
+            return [self._file_path / x
+                    if not x.startswith('/') else Path(x)
+                    for x in self.sources.error]
+        else:
+            return self.sources.error
 
     @classmethod
-    def load(cls, file: str):
-        with open(file, 'r') as f:
-            _file = yaml.load(f, Loader=yaml.CLoader)
+    def load(cls, file: Union[str, TextIOWrapper]):
+        if isinstance(file, TextIOWrapper):
+            _file_path = None
+            _file = yaml.load(file, Loader=yaml.CLoader)
+        else:
+            _file_path = file
+            with open(file, 'r') as f:
+                _file = yaml.load(f, Loader=yaml.CLoader)
 
         pipeline = _file.pop('pipeline', {})
-        access_pipeline = [PipelineItem(parse_expression=x) for x in pipeline.get('access', [])]
-        error_pipeline = [PipelineItem(parse_expression=x) for x in pipeline.get('error', [])]
+        access_pipelines = [PipelineItem(parse_expression=x) for x in pipeline.get('access', [])]
+        error_pipelines = [PipelineItem(parse_expression=x) for x in pipeline.get('error', [])]
 
-        return cls(
+        _cls = cls(
             **_file,
-            access_pipeline=access_pipeline,
-            error_pipeline=error_pipeline
+            access_pipelines=access_pipelines,
+            error_pipelines=error_pipelines,
+            _file_path=_file_path,
         )
 
+        return _cls
+
     def __post_init__(self):
+        self._file_path = Path(self._file_path).parent if self._file_path else None
         self.sources = (self.sources if isinstance(self.sources, Sources) else Sources(**self.sources))

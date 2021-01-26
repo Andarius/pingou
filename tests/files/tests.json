@@ -43,6 +43,24 @@
         "urt": "3.004",
         "user_agent": "okhttp/3.12.1"
       }
+    },
+    {
+      "line": "192.168.64.1 - - [26/Jan/2021:13:54:59 +0000] \"GET /80 HTTP/1.1\" 404 153 \"-\" \"curl/7.65.3\" \"-\"",
+      "reg": "{IP_ADDRESS:ip_address} - {TEXT:remote_user} \\[{TIMESTAMP:timestamp} {TZ:tz}\\] \"{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}\" {NUMBER:status_code} {NUMBER:body_bytes_sent} \"{TEXT:http_referer}\" \"{ANY:user_agent}\" \"{ANY:forwarded_for}\"",
+      "expected": {
+        "body_bytes_sent": "153",
+        "http_referer": "-",
+        "http_version": "1.1",
+        "ip_address": "192.168.64.1",
+        "remote_user": "-",
+        "request": "/80",
+        "request_method": "GET",
+        "status_code": "404",
+        "timestamp": "26/Jan/2021:13:54:59",
+        "tz": "+0000",
+        "forwarded_for": "-",
+        "user_agent": "curl/7.65.3"
+      }
     }
   ]
 }
