@@ -1,2 +1,2 @@
-CREATE SCHEMA IF NOT EXISTS pingou;
-SET SCHEMA 'pingou';
+CREATE SCHEMA IF NOT EXISTS monitoring;
+SET SCHEMA 'monitoring';

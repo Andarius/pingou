@@ -12,13 +12,13 @@ import pytest
 
 def _count_logs(engine, processed_at_not_null=False):
     query = (
-        'SELECT count(*) from pingou.nginx_logs where processed_at is not null' if processed_at_not_null else
-        'SELECT count(*) from pingou.nginx_logs')
+        'SELECT count(*) from monitoring.nginx_logs where processed_at is not null' if processed_at_not_null else
+        'SELECT count(*) from monitoring.nginx_logs')
     return fetch_one(engine, query)[0]
 
 
 def _fetch_last_item(engine):
-    return fetch_one(engine, 'SELECT * from pingou.nginx_logs order by inserted_at desc',
+    return fetch_one(engine, 'SELECT * from monitoring.nginx_logs order by inserted_at desc',
                      as_dict=True)
 
 
@@ -58,7 +58,7 @@ def test_queue_worker(loop, pool, engine):
         await queue_worker(pool, pipeline, [], chunk_size=1)
 
     async def test():
-        insert_many('pingou.nginx_logs',
+        insert_many('monitoring.nginx_logs',
                     [{
                         'log': log_line,
                         'file': 'a file',
@@ -113,7 +113,7 @@ def test_queue_worker_no_match(engine, pool, loop):
         await queue_worker(pool, pipeline, [], chunk_size=1)
 
     async def test():
-        insert_many('pingou.nginx_logs',
+        insert_many('monitoring.nginx_logs',
                     [{
                         'log': log_line,
                         'file': 'a file',
@@ -171,7 +171,7 @@ def test_listen_nginx(loop, nginx_logs, pool, engine):
         resp = requests.get('http://127.0.0.1/error')
         assert resp.status_code == 404
         await wait_true(lambda: _count_logs(engine) == 4)
-        items = fetch_all(engine, 'SELECT * from pingou.nginx_logs order by inserted_at desc limit 2')
+        items = fetch_all(engine, 'SELECT * from monitoring.nginx_logs order by inserted_at desc limit 2')
         access_item, error_item = ((items[0], items[1])
                                    if not items[0]['error']
                                    else (items[1], items[0]))
@@ -188,11 +188,11 @@ def test_listen_nginx(loop, nginx_logs, pool, engine):
 
 def test_listen_nginx_full(loop, nginx_logs, pool, engine):
     from pingou.listener.listener import listener_main, worker_main
-    access_logs, error_logs = nginx_logs
 
     async def listener():
         options = {
             **DEFAULT_OPTIONS,
+            'nb_workers': 0,
             'config_path': str(DATA_PATH / 'config.yml')
         }
         await listener_main(SimpleNamespace(**options))
@@ -232,7 +232,7 @@ def test_listen_nginx_full(loop, nginx_logs, pool, engine):
         resp = requests.get('http://127.0.0.1/error')
         assert resp.status_code == 404
         await wait_true(lambda: _count_logs(engine, processed_at_not_null=True) == 4, sleep=0.5)
-        items = fetch_all(engine, 'SELECT * from pingou.nginx_logs order by inserted_at desc limit 2')
+        items = fetch_all(engine, 'SELECT * from monitoring.nginx_logs order by inserted_at desc limit 2')
         access_item, error_item = ((items[0], items[1])
                                    if not items[0]['error']
                                    else (items[1], items[0]))
@@ -242,4 +242,55 @@ def test_listen_nginx_full(loop, nginx_logs, pool, engine):
     run_first_completed(loop,
                         listener(),
                         worker(),
+                        test())
+
+
+
+def test_listen_nginx_full_listener_only(loop, nginx_logs, pool, engine):
+    from pingou.listener.listener import listener_main, worker_main
+
+    async def listener():
+        options = {
+            **DEFAULT_OPTIONS,
+            'nb_workers': 1,
+            'config_path': str(DATA_PATH / 'config.yml')
+        }
+        await listener_main(SimpleNamespace(**options))
+
+    async def test():
+        # Waiting for listener to start
+        await asyncio.sleep(1)
+
+        # Testing access
+        resp = requests.get('http://127.0.0.1')
+        assert resp.status_code == 200
+        await wait_true(lambda: _count_logs(engine) == 1)
+        await wait_true(lambda: _count_logs(engine, processed_at_not_null=True) == 1,
+                        sleep=0.5)
+        item = _fetch_last_item(engine)
+        assert item['log'].startswith('127.0.0.1 - - ')
+        assert item['inserted_at']
+        assert item['infos']
+
+        # Testing again access
+        resp = requests.get('http://127.0.0.1')
+        assert resp.status_code == 200
+        await wait_true(lambda: _count_logs(engine, processed_at_not_null=True) == 2,
+                        sleep=0.5)
+        item = _fetch_last_item(engine)
+        assert item['log'].startswith('127.0.0.1 - - ')
+
+        # # Testing error
+        resp = requests.get('http://127.0.0.1/error')
+        assert resp.status_code == 404
+        await wait_true(lambda: _count_logs(engine, processed_at_not_null=True) == 4, sleep=0.5)
+        items = fetch_all(engine, 'SELECT * from monitoring.nginx_logs order by inserted_at desc limit 2')
+        access_item, error_item = ((items[0], items[1])
+                                   if not items[0]['error']
+                                   else (items[1], items[0]))
+        assert access_item['infos']
+        assert '[error]' in error_item['log']
+
+    run_first_completed(loop,
+                        listener(),
                         test())

@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from rich.logging import RichHandler
 
-from env import RELEASE_STAGE, BUGSNAG_ID
+from pingou.env import RELEASE_STAGE, BUGSNAG_ID
 
 try:
     import bugsnag

@@ -8,8 +8,7 @@ import asyncio
 from functools import partial
 from typing import AsyncIterator
 import time
-import subprocess
-import select
+
 
 LINE_BUFFER = 1
 

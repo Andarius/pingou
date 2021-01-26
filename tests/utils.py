@@ -78,7 +78,7 @@ def get_tables(engine, ignore=None):
     table_query = """
     SELECT concat_ws('.', schemaname, tablename) as table
     from pg_catalog.pg_tables
-    where schemaname IN ('pingou')
+    where schemaname IN ('monitoring')
     ORDER BY schemaname, tablename
     """
     resp = fetch_all(engine, table_query)

@@ -11,5 +11,5 @@ do
     cat "${f}" >> "${INIT_FILE}"
 done
 
-echo "CREATE DATABASE monitoring;" | psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER"
-< "${INIT_FILE}" psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "monitoring"
+echo "CREATE DATABASE pingou;" | psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER"
+< "${INIT_FILE}" psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "pingou"

@@ -1,14 +1,14 @@
 from .tail import tail
 from typing import List
 import asyncio
-from logs import logger
+from pingou.logs import logger
 from pathlib import Path
 
 from asyncpg import Connection
 from asyncpg.pool import Pool
 from ..parser import parse_line
 from ..config import Config, PipelineItem
-from pg import insert_pg, iterate_pg, connect_pool
+from pingou.pg import insert_pg, iterate_pg, connect_pool
 import datetime as dt
 
 _GET_LOG_QUERY = 'SELECT id, log, error from {table} where processed_at is NULL order by inserted_at asc'
@@ -31,7 +31,7 @@ async def queue_worker(pool: Pool,
                        access_pipelines: List[PipelineItem],
                        error_pipelines: List[PipelineItem],
                        *,
-                       table: str = 'pingou.nginx_logs',
+                       table: str = 'monitoring.nginx_logs',
                        chunk_size: int = 100):
     if not access_pipelines and not error_pipelines:
         logger.warning(f'No pipelines specified, stopping worker')
@@ -65,7 +65,7 @@ async def listen_to_file(file_path: str,
                          is_error: bool = False,
                          last_lines: int = 0,
                          fp_poll_secs: float = 0.125,
-                         table: str = 'pingou.nginx_logs'):
+                         table: str = 'monitoring.nginx_logs'):
     if not Path(file_path).exists():
         raise FileNotFoundError(f'No file found at {file_path}')
 
@@ -95,16 +95,23 @@ async def listener_main(options):
 
     pool = await connect_pool(options.pg, options.pg_db)
 
-    file_listeners = [
-        listen_to_file(str(_path), pool)
+    fns = [
+        listen_to_file(str(_path), pool, table=options.table)
         for _path in config.access_files
     ]
-    file_listeners += [
-        listen_to_file(str(_path), pool, is_error=True)
+    fns += [
+        listen_to_file(str(_path), pool, is_error=True,
+                       table=options.table)
         for _path in config.error_files
     ]
+    if options.nb_workers:
+        fns += [
+            queue_worker(pool, config.access_pipelines, config.error_pipelines,
+                         table=options.table)
+            for _path in range(options.nb_workers)
+        ]
     try:
-        await asyncio.gather(*file_listeners)
+        await asyncio.gather(*fns)
     except KeyboardInterrupt:
         logger.info('Stopping listeners')
 
@@ -118,7 +125,8 @@ async def worker_main(options):
     config = Config.load(options.config_path or config_file)
     pool = await connect_pool(options.pg, options.pg_db)
     workers = [
-        queue_worker(pool, config.access_pipelines, config.error_pipelines)
+        queue_worker(pool, config.access_pipelines, config.error_pipelines,
+                     table=options.table)
         for _path in range(options.nb_workers)
     ]
     try:

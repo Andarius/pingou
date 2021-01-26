@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import logging
 from .utils import get_tables, clean_tables
-from pg import init_connection
+from pingou.pg import init_connection
 from psycopg2.extensions import connection
 
 _cur_file = Path(os.path.dirname(__file__))
@@ -18,14 +18,15 @@ DATA_PATH = _cur_file / 'files'
 DEFAULT_OPTIONS = {
     'log_lvl': logging.WARNING,
     'pg': 'postgres:postgres@localhost:5432',
-    'pg_db': 'monitoring',
+    'pg_db': 'pingou',
     'verbose': False,
+    'table': 'monitoring.nginx_logs'
 }
 
 
 @pytest.fixture(scope='session', autouse=True)
 def init_logs():
-    from logs import init_logging
+    from pingou.logs import init_logging
     init_logging(logging.WARNING)
 
 
@@ -36,7 +37,7 @@ def pg_envs():
         'PG_USER': 'postgres',
         'PG_PWD': 'postgres',
         'PG_PORT': '5432',
-        'PG_DB': 'monitoring'
+        'PG_DB': 'pingou'
     }
 
 

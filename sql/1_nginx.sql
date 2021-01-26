@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS pingou.nginx_logs
+CREATE TABLE IF NOT EXISTS monitoring.nginx_logs
 (
     id           SERIAL PRIMARY KEY NOT NULL,
     log          TEXT,

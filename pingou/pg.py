@@ -2,7 +2,7 @@ import asyncpg
 from asyncpg.connection import Connection
 from typing import List, AsyncIterator
 import asyncio
-from logs import logger
+from pingou.logs import logger
 
 try:
     import ujson as json

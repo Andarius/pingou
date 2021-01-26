@@ -15,9 +15,6 @@ RUN  apk --no-cache add --virtual build-dependencies gcc g++ make musl-dev libff
 RUN  chown -R user:user /pingou
 
 ADD run.py ./
-ADD env.py ./
-ADD pg.py ./
-ADD logs.py ./
 ADD pingou/ pingou/
 ADD static/ static/
 

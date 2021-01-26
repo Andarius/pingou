@@ -5,20 +5,23 @@ import asyncio
 import inspect
 import sys
 from pingou.listener import listener_main, worker_main
-from logs import init_logging
+from pingou.logs import init_logging
 from pingou import __version__
 
 parser = argparse.ArgumentParser('Pingou logs parser')
 subparsers = parser.add_subparsers()
 
 parser.add_argument('--pg', default='postgres:postgres@postgres:5432', help='PG host/port')
-parser.add_argument('--pg-db', default='monitoring', help='PG Database')
+parser.add_argument('--pg-db', default='pingou', help='PG Database')
 parser.add_argument('--log-path', default=os.getenv('LOG_PATH', '/tmp'),
                     help='Logs path')
 parser.add_argument('--log-lvl', default=os.getenv('LOG_LEVEL', logging.INFO),
                     help='Log level to user')
 parser.add_argument('-v', '--verbose', action='store_true',
                     help='Verbosity (shows or not progress bars)')
+parser.add_argument('--table',
+                    default=os.getenv('PG_TABLE', 'monitoring.nginx_logs'),
+                    help='Table to write the logs to')
 
 # Listener
 parser_listener = subparsers.add_parser('listener')
@@ -26,11 +29,16 @@ parser_listener.set_defaults(func=listener_main)
 parser_listener.add_argument('-p', '--config-path',
                              type=str,
                              help='Config file path')
+parser_listener.add_argument('--nb-workers',
+                             type=int,
+                             default=0,
+                             help='Number of workers to run')
 parser_listener.add_argument('config-file',
                              type=argparse.FileType('r'),
                              nargs='?',
                              default=sys.stdin,
                              help='Config file')
+
 # Worker
 parser_worker = subparsers.add_parser('worker')
 parser_worker.set_defaults(func=worker_main)
