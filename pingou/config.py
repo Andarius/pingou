@@ -2,9 +2,7 @@ from dataclasses import dataclass, InitVar, field
 import yaml
 from typing import Union, List
 from collections import namedtuple
-from itertools import chain
 import re
-from io import TextIOWrapper
 from .parser import parse_regex
 from pathlib import Path
 
@@ -47,14 +45,9 @@ class Config:
             return self.sources.error
 
     @classmethod
-    def load(cls, file: Union[str, TextIOWrapper]):
-        if isinstance(file, TextIOWrapper):
-            _file_path = None
-            _file = yaml.load(file, Loader=yaml.CLoader)
-        else:
-            _file_path = file
-            with open(file, 'r') as f:
-                _file = yaml.load(f, Loader=yaml.CLoader)
+    def load(cls, file: str):
+        with open(file, 'r') as f:
+            _file = yaml.load(f, Loader=yaml.CLoader)
 
         pipeline = _file.pop('pipeline', {})
         access_pipelines = [PipelineItem(parse_expression=x) for x in pipeline.get('access', [])]
@@ -64,7 +57,7 @@ class Config:
             **_file,
             access_pipelines=access_pipelines,
             error_pipelines=error_pipelines,
-            _file_path=_file_path,
+            _file_path=file,
         )
 
         return _cls

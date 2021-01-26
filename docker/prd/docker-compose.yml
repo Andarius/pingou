@@ -31,6 +31,7 @@ services:
     external_links:
       - postgres:postgres
     volumes:
+       - ../../tests/files/config-prd.yml:/static/config.yml:ro
        - nginx_logs:/nginx_logs:ro
 
 volumes:

@@ -105,6 +105,7 @@ async def listener_main(options):
         for _path in config.error_files
     ]
     if options.nb_workers:
+        logger.info(f'Starting {options.nb_workers} workers')
         fns += [
             queue_worker(pool, config.access_pipelines, config.error_pipelines,
                          table=options.table)
@@ -124,6 +125,7 @@ async def worker_main(options):
 
     config = Config.load(options.config_path or config_file)
     pool = await connect_pool(options.pg, options.pg_db)
+    logger.info(f'Listening to events...')
     workers = [
         queue_worker(pool, config.access_pipelines, config.error_pipelines,
                      table=options.table)
