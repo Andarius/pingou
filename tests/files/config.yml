@@ -8,7 +8,8 @@ sources:
 
 pipeline:
   access:
-    - '{IP_ADDRESS:ip_address} - {TEXT:remote_user} \[{TIMESTAMP:timestamp} {TZ:tz}\] "{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}" {NUMBER:status_code} {NUMBER:body_bytes_sent} "{TEXT:http_referer}" "{ANY:user_agent}" cookie="{ANY:cookie}" rt={NUMBER:rt} uct={NUMBER:uct} uht={NUMBER:uht} urt={NUMBER:urt}'
-    - '{IP_ADDRESS:ip_address} - {TEXT:remote_user} \[{TIMESTAMP:timestamp} {TZ:tz}\] "{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}" {NUMBER:status_code} {NUMBER:body_bytes_sent} "{TEXT:http_referer}" "{ANY:user_agent}" "{ANY:forwarded_for}"'
+    - '{IP_ADDRESS:ip_address} - {TEXT:remote_user} \[{TIMESTAMP_FULL:timestamp} {TZ:tz}\] "{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}" {NUMBER:status_code} {NUMBER:body_bytes_sent} "{TEXT:http_referer}" "{ANY:user_agent}" cookie="{ANY:cookie}" rt={NUMBER:rt} uct={NUMBER:uct} uht={NUMBER:uht} urt={NUMBER:urt}'
+    - '{IP_ADDRESS:ip_address} - {TEXT:remote_user} \[{TIMESTAMP_FULL:timestamp} {TZ:tz}\] "{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}" {NUMBER:status_code} {NUMBER:body_bytes_sent} "{TEXT:http_referer}" "{ANY:user_agent}" "{ANY:forwarded_for}"'
   error:
+    - '{DATE:date} {TIMESTAMP:time} \[error\] {ANY:error}'
     - '{ANY:error}'

@@ -51,7 +51,7 @@ def test_queue_worker(loop, pool, engine):
     log_line = '162.142.125.54 - - [31/Dec/2020:09:11:34 +0000] "GET / HTTP/1.1" 404 33 "-" "Mozilla/5.0 (compatible; CensysInspect/1.1; +https://about.censys.io/)" cookie="-" rt=0.002 uct=0.000 uht=0.004 urt=0.004'
     pipeline = [
         PipelineItem(
-            parse_expression='{IP_ADDRESS:ip_address} - {TEXT:remote_user} \\[{TIMESTAMP:timestamp} {TZ:tz}\\] "{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}" {NUMBER:status_code} {NUMBER:body_bytes_sent} "{TEXT:http_referer}" "{ANY:user_agent}" cookie="{ANY:cookie}" rt={NUMBER:rt} uct={NUMBER:uct} uht={NUMBER:uht} urt={NUMBER:urt}')
+            parse_expression='{IP_ADDRESS:ip_address} - {TEXT:remote_user} \\[{TIMESTAMP_FULL:timestamp} {TZ:tz}\\] "{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}" {NUMBER:status_code} {NUMBER:body_bytes_sent} "{TEXT:http_referer}" "{ANY:user_agent}" cookie="{ANY:cookie}" rt={NUMBER:rt} uct={NUMBER:uct} uht={NUMBER:uht} urt={NUMBER:urt}')
     ]
 
     async def worker():
@@ -106,7 +106,7 @@ def test_queue_worker_no_match(engine, pool, loop):
     log_line = '127.0.0.1 - - [25/Jan/2021:16:35:54 +0000] "GET / HTTP/1.1" 200 612 "-" "python-requests/2.25.1" "-"'
     pipeline = [
         PipelineItem(
-            parse_expression='{IP_ADDRESS:ip_address} - {TEXT:remote_user} \\[{TIMESTAMP:timestamp} {TZ:tz}\\] "{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}" {NUMBER:status_code} {NUMBER:body_bytes_sent} "{TEXT:http_referer}" "{ANY:user_agent}" cookie="{ANY:cookie}" rt={NUMBER:rt} uct={NUMBER:uct} uht={NUMBER:uht} urt={NUMBER:urt}')
+            parse_expression='{IP_ADDRESS:ip_address} - {TEXT:remote_user} \\[{TIMESTAMP_FULL:timestamp} {TZ:tz}\\] "{REQUEST_METHOD:request_method} {REQUEST:request} {HTTP_VERSION:http_version}" {NUMBER:status_code} {NUMBER:body_bytes_sent} "{TEXT:http_referer}" "{ANY:user_agent}" cookie="{ANY:cookie}" rt={NUMBER:rt} uct={NUMBER:uct} uht={NUMBER:uht} urt={NUMBER:urt}')
     ]
 
     async def worker():
