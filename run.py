@@ -3,7 +3,10 @@ from pathlib import Path
 
 from piou import Cli, Option, Derived
 
-from pingou.env import NB_WORKERS, PG_TABLE
+from pingou.env import (
+    NB_WORKERS, PG_TABLE,
+    PG_DB, PG_HOST, PG_USER, PG_PORT, PG_PASSWORD
+)
 from pingou.logs import init_logging
 
 cli = Cli('Pingou logs parser')
@@ -22,11 +25,11 @@ def init(
 
 
 def get_pg_url(
-        pg_user: str = Option('postgres', '--user'),
-        pg_pwd: str = Option('postgres', '--pwd'),
-        pg_host: str = Option('localhost', '--host'),
-        pg_port: int = Option(5432, '--port'),
-        pg_db: str = Option('postgres', '--db')
+        pg_user: str = Option(PG_USER, '--user'),
+        pg_pwd: str = Option(PG_PASSWORD, '--pwd'),
+        pg_host: str = Option(PG_HOST, '--host'),
+        pg_port: int = Option(PG_PORT, '--port'),
+        pg_db: str = Option(PG_DB, '--db')
 
 ):
     return f'postgres://{pg_user}:{pg_pwd}@{pg_host}:{pg_port}/{pg_db}'
