@@ -100,6 +100,8 @@ _CLEAN_IGNORE_TABLES = set()
 
 def clean_tables(engine, tables):
     tables = set(tables) - _CLEAN_IGNORE_TABLES
+    if not tables:
+        return
     tables = ', '.join(tables)
     exec_req(engine, f'TRUNCATE {tables}')
 
@@ -141,4 +143,3 @@ def run_first_completed(loop, *fns):
 def append_line(file: Path, line: str):
     with file.open('a') as f:
         f.write(line)
-   

@@ -20,11 +20,11 @@ class PipelineItem:
 
 @dataclass
 class Config:
-    access_pipelines: List[PipelineItem]
-    error_pipelines: List[PipelineItem]
+    access_pipelines: list[PipelineItem]
+    error_pipelines: list[PipelineItem]
 
-    sources: Union[dict, Sources]
-    _file_path: str = None
+    sources: Sources
+    _file_path: Path | None = None
 
     @property
     def access_files(self) -> List[Path]:
@@ -45,8 +45,8 @@ class Config:
             return self.sources.error
 
     @classmethod
-    def load(cls, file: str):
-        with open(file, 'r') as f:
+    def load(cls, file: Path):
+        with file.open('r') as f:
             _file = yaml.load(f, Loader=yaml.CLoader)
 
         pipeline = _file.pop('pipeline', {})

@@ -1,71 +1,75 @@
-import argparse
-import os
 import logging
-import asyncio
-import inspect
-import sys
-from pingou.listener import listener_main, worker_main
+from pathlib import Path
+
+from piou import Cli, Option, Derived
+
+from pingou.env import NB_WORKERS, PG_TABLE
 from pingou.logs import init_logging
-from pingou import __version__
 
-parser = argparse.ArgumentParser('Pingou logs parser')
-subparsers = parser.add_subparsers()
-
-parser.add_argument('--pg', default='postgres:postgres@postgres:5432', help='PG host/port')
-parser.add_argument('--pg-db', default=os.getenv('PG_DB', 'pingou'), help='PG Database')
-parser.add_argument('--log-path', default=os.getenv('LOG_PATH', '/tmp'),
-                    help='Logs path')
-parser.add_argument('--log-lvl', default=os.getenv('LOG_LEVEL', logging.WARNING),
-                    help='Log level to user')
-parser.add_argument('-v', '--verbose', action='store_true',
-                    help='Verbosity (shows or not progress bars)')
-parser.add_argument('--table',
-                    default=os.getenv('PG_TABLE', 'monitoring.nginx_logs'),
-                    help='Table to write the logs to')
-
-# Listener
-parser_listener = subparsers.add_parser('listener')
-parser_listener.set_defaults(func=listener_main)
-parser_listener.add_argument('-p', '--config-path',
-                             type=str,
-                             default='/static/config.yml',
-                             help='Config file path')
-parser_listener.add_argument('--nb-workers',
-                             type=int,
-                             default=os.getenv('NB_WORKERS', 0),
-                             help='Number of workers to run')
-
-# Worker
-parser_worker = subparsers.add_parser('worker')
-parser_worker.set_defaults(func=worker_main)
-parser_worker.add_argument('-n', '--nb-workers',
-                           default=os.getenv('NB_WORKERS', 1),
-                           type=int,
-                           help='Number of workers')
-parser_worker.add_argument('-p', '--config-path',
-                           type=str,
-                           default='/static/config.yml',
-                           help='Config file path')
-# Version
-parser_version = subparsers.add_parser('version')
-parser_version.set_defaults(func=lambda _: logging.info(f'Current version: {__version__}'))
+cli = Cli('Pingou logs parser')
 
 
-def main(options):
-    init_logging(options.log_lvl, options.log_path, __version__)
+@cli.processor()
+def init(
+        verbose: bool = Option(False, '-v', '--verbose'),
+        verbose2: bool = Option(False, '-vv', '--verbose2'),
+):
+    init_logging(
+        logging.DEBUG if verbose2 else
+        logging.INFO if verbose else
+        logging.WARNING
+    )
 
-    if not hasattr(options, 'func'):
-        logging.info('Nothing to do')
-        return
-    try:
-        if inspect.iscoroutinefunction(options.func):
-            asyncio.run(options.func(options))
-        else:
-            options.func(options)
-    except KeyboardInterrupt:
-        logging.info('Stopping')
+
+def get_pg_url(
+        pg_user: str = Option('postgres', '--user'),
+        pg_pwd: str = Option('postgres', '--pwd'),
+        pg_host: str = Option('localhost', '--host'),
+        pg_port: int = Option(5432, '--port'),
+        pg_db: str = Option('postgres', '--db')
+
+):
+    return f'postgres://{pg_user}:{pg_pwd}@{pg_host}:{pg_port}/{pg_db}'
+
+
+ConfigPath = Option('/static/config.yml', '-p',
+                    help='Config path')
+NbWorkers = Option(NB_WORKERS, '-n', '--nb-workers',
+                   help='Number of workers to run')
+Table = Option(PG_TABLE, '--table', help='Table to write the logs to')
+
+
+@cli.command('listener')
+async def listener_main(
+        config_path: Path = ConfigPath,
+        nb_workers: int = NbWorkers,
+        pg_url: str = Derived(get_pg_url),
+        table: str = Table
+):
+    from pingou import run_listener
+    await run_listener(config_path=config_path,
+                       nb_workers=nb_workers,
+                       pg_url=pg_url,
+                       table=table)
+
+
+@cli.command('worker')
+async def worker_main(
+        config_path: Path = ConfigPath,
+        nb_workers: int = NbWorkers,
+        table: str = Table,
+        pg_url: str = Derived(get_pg_url),
+):
+    from pingou import run_worker
+    await run_worker(config_path=config_path,
+                     nb_workers=nb_workers,
+                     pg_url=pg_url,
+                     table=table)
+
+
+def run():
+    cli.run()
 
 
 if __name__ == '__main__':
-    options = parser.parse_args()
-    main(options)
+    run()

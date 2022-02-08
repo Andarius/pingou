@@ -1,6 +1,6 @@
+import re
 from dataclasses import dataclass
 from typing import Literal, Optional
-import re
 
 REQUEST_METHOD = Literal['GET', 'POST', 'PUT', 'HEAD', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE', 'PATCH']
 
@@ -16,11 +16,11 @@ class NginxLog:
     body_bytes_sent: int
     referer: str
     user_agent: str
-    cookie: str = None
-    request_time: int = None
-    upstream_connect_time: int = None
-    upstream_header_time: int = None
-    upstream_response_time: int = None
+    cookie: str | None = None
+    request_time: int | None = None
+    upstream_connect_time: int | None = None
+    upstream_header_time: int | None = None
+    upstream_response_time: int | None = None
 
 
 def parse_line(line: str,

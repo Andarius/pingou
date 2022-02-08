@@ -14,6 +14,8 @@ logger = logging.getLogger('pingou')
 
 
 def init_bugsnag(app_version: str):
+    if not bugsnag:
+        raise ImportError('Bugsnag not installed')
     bugsnag.configure(
         api_key=BUGSNAG_ID,
         project_root=Path(__file__).parent / 'pingou',
@@ -33,17 +35,15 @@ def init_logging(
         log_lvl,
         logs_path: str = None,
         app_version: str = None):
-    fh = logging.FileHandler(Path(logs_path) / 'pingou.log') if logs_path else None
     logging.basicConfig(
         level=log_lvl.upper() if isinstance(log_lvl, str) else log_lvl,
         format=_LOG_FORMAT,
         datefmt="[%X]",
         handlers=[
-            fh,
             RichHandler(show_path=False, rich_tracebacks=True)
         ]
     )
 
-    if bugsnag:
+    if bugsnag is not None and app_version:
         bugsnag_handler = init_bugsnag(app_version)
         logger.addHandler(bugsnag_handler)

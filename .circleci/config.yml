@@ -1,0 +1,66 @@
+version: 2.1
+
+
+
+executors:
+  test-build:
+    docker:
+      - image: circleci/python:3.10
+      - image: circleci/postgres:14-ram
+        environment:
+          POSTGRES_PASSWORD: postgres
+
+jobs:
+
+  run-tests:
+    executor: test-build
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - deps-{{ checksum "poetry.lock" }}
+      - run:
+          name: Install python dependencies
+          command: poetry install
+      - save_cache:
+          key: deps-{{ checksum "poetry.lock" }}
+          paths:
+            - /home/circleci/.cache/pypoetry/virtualenvs
+      - run:
+          name: Running type checking
+          command: poetry run pyright
+      - run:
+          name: Run tests
+          command: |
+            poetry run pytest -vv --junitxml=tests/junit.xml
+      - run:
+          name: Generating coverage
+          command: |
+            poetry run coverage xml -o tests/coverage.xml
+            poetry run coverage html
+      - store_test_results:
+          path: tests
+      - store_artifacts:
+          path: htmlcov
+
+workflows:
+
+  features:
+    when:
+      matches:
+        pattern: "^(feat|feature)\\/.*$"
+        value: << pipeline.git.branch >>
+    jobs:
+      - run-tests
+
+  staging:
+    when:
+      equal: [ dev, << pipeline.git.branch >> ]
+    jobs:
+      - run-tests
+
+  production:
+    when:
+      equal: [ master, << pipeline.git.branch >> ]
+    jobs:
+      - run-tests

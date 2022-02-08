@@ -1,15 +1,16 @@
-from .tail import tail
-from typing import List
 import asyncio
-from pingou.logs import logger
+import datetime as dt
 from pathlib import Path
+from typing import List
 
 from asyncpg import Connection
 from asyncpg.pool import Pool
-from ..parser import parse_line
-from ..config import Config, PipelineItem
+
+from pingou.logs import logger
 from pingou.pg import insert_pg, iterate_pg, connect_pool
-import datetime as dt
+from .tail import tail
+from ..config import Config, PipelineItem
+from ..parser import parse_line
 
 _GET_LOG_QUERY = 'SELECT id, log, error from {table} where processed_at is NULL order by inserted_at asc'
 
@@ -53,8 +54,10 @@ async def queue_worker(pool: Pool,
                 else:
                     log_infos = None
                 data.append({'infos': log_infos, 'id': item['id']})
-
-            await update_items(conn, table, data)
+            try:
+                await update_items(conn, table, data)
+            except Exception as e:
+                print(e.args)
     finally:
         await pool.release(conn, timeout=10)
 
@@ -85,53 +88,54 @@ async def listen_to_file(file_path: str,
         await pool.release(conn, timeout=10)
 
 
-async def listener_main(options):
-    config_file = vars(options).get('config-file')
-    if not options.config_path and not config_file:
-        logger.error('Please specify either a config path of file')
-        return
-
-    config = Config.load(options.config_path or config_file)
-
-    pool = await connect_pool(options.pg, options.pg_db)
-
-    fns = [
-        listen_to_file(str(_path), pool, table=options.table)
-        for _path in config.access_files
-    ]
-    fns += [
-        listen_to_file(str(_path), pool, is_error=True,
-                       table=options.table)
-        for _path in config.error_files
-    ]
-    if options.nb_workers:
-        logger.info(f'Starting {options.nb_workers} workers')
-        fns += [
-            queue_worker(pool, config.access_pipelines, config.error_pipelines,
-                         table=options.table)
-            for _path in range(options.nb_workers)
-        ]
-    try:
-        await asyncio.gather(*fns)
-    except KeyboardInterrupt:
-        logger.info('Stopping listeners')
-
-
-async def worker_main(options):
-    config_file = vars(options).get('config-file')
-    if not options.config_path and not config_file:
-        logger.error('Please specify either a config path of file')
-        return
-
-    config = Config.load(options.config_path or config_file)
-    pool = await connect_pool(options.pg, options.pg_db)
+async def run_worker(
+        config_path: Path,
+        nb_workers: int,
+        table: str,
+        pg_url: str,
+):
+    config = Config.load(config_path)
+    pool = await connect_pool(pg_url)
     logger.info(f'Listening to events...')
     workers = [
         queue_worker(pool, config.access_pipelines, config.error_pipelines,
-                     table=options.table)
-        for _path in range(options.nb_workers)
+                     table=table)
+        for _path in range(nb_workers)
     ]
     try:
         await asyncio.gather(*workers)
     except KeyboardInterrupt:
         logger.info('Stopping workers')
+
+
+async def run_listener(
+        config_path: Path,
+        nb_workers: int,
+        table: str,
+        pg_url: str,
+):
+    config = Config.load(config_path)
+    pool = await connect_pool(pg_url)
+
+    fns = [
+        listen_to_file(str(_path), pool, table=table)
+        for _path in config.access_files
+    ]
+    fns += [
+        listen_to_file(str(_path), pool, is_error=True,
+                       table=table)
+        for _path in config.error_files
+    ]
+    if nb_workers:
+        logger.info(f'Starting {nb_workers} workers')
+        fns += [
+            queue_worker(pool,
+                         config.access_pipelines,
+                         config.error_pipelines,
+                         table=table)
+            for _ in range(nb_workers)
+        ]
+    try:
+        await asyncio.gather(*fns)
+    except KeyboardInterrupt:
+        logger.info('Stopping listeners')

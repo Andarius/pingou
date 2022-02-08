@@ -6,7 +6,7 @@ services:
     image: postgres:${PG_VERSION}
     container_name: ${PG_NAME}
     ports:
-      - ${HOST}:5432:5432
+      - "127.0.0.1:5432:5432"
     volumes:
       - type=tmpfs,destination=/var/lib/postgresql/data
       - ./init-pg.sh:/docker-entrypoint-initdb.d/init-pg.sh:ro

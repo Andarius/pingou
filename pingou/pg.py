@@ -25,10 +25,9 @@ async def init_connection(conn):
     )
 
 
-async def connect_pool(url: str, db: str):
-    pg_url = f'postgresql://{url}/{db}'
-    logger.info(f'Connecting to {pg_url}')
-    pool = await asyncpg.create_pool(pg_url, init=init_connection)
+async def connect_pool(url: str):
+    logger.info(f'Connecting to {url}')
+    pool = await asyncpg.create_pool(url, init=init_connection)
     return pool
 
 
