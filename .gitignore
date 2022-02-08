@@ -110,3 +110,4 @@ tmp/
 .coverage
 access.log
 error.log
+#requirements.txt
