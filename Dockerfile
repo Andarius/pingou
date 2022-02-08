@@ -8,12 +8,12 @@ WORKDIR /pingou
 
 ADD requirements.txt /pingou
 #
-RUN  apk --no-cache add --virtual build-dependencies gcc g++ make musl-dev libffi-dev && \
-     pip install --no-cache-dir -r requirements.txt && \
-     apk del build-dependencies && \
-     rm requirements.txt \
+RUN apk --no-cache add --virtual build-dependencies gcc g++ make musl-dev libffi-dev && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apk del build-dependencies && \
+    rm requirements.txt
 
-RUN  chown -R user:user /pingou
+RUN chown -R user:user /pingou
 
 ADD run.py ./
 ADD pingou/ pingou/

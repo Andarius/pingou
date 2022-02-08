@@ -32,7 +32,7 @@ def get_pg_url(
     return f'postgres://{pg_user}:{pg_pwd}@{pg_host}:{pg_port}/{pg_db}'
 
 
-ConfigPath = Option('/static/config.yml', '-p',
+ConfigPath = Option(Path('/static/config.yml'), '-p',
                     help='Config path')
 NbWorkers = Option(NB_WORKERS, '-n', '--nb-workers',
                    help='Number of workers to run')
@@ -47,6 +47,7 @@ async def listener_main(
         table: str = Table
 ):
     from pingou import run_listener
+
     await run_listener(config_path=config_path,
                        nb_workers=nb_workers,
                        pg_url=pg_url,
