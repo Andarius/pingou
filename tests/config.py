@@ -12,8 +12,8 @@ def test_load_config(path):
     assert conf
     assert conf.access_files
     for _file in conf.access_files:
-        assert 'pingou/tests/files/../nginx_logs/access.log' in str(_file)
+        assert 'tests/files/../nginx_logs/access.log' in str(_file)
 
     assert conf.error_files
     for _file in conf.error_files:
-        assert 'pingou/tests/files/../nginx_logs/error.log' in str(_file)
+        assert 'tests/files/../nginx_logs/error.log' in str(_file)
